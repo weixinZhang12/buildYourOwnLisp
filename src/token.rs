@@ -1,7 +1,9 @@
-use std::collections::VecDeque;
+use std::{collections::VecDeque, iter::Peekable};
+
+type number = u32;
 #[derive(Debug)]
 pub enum Token {
-    Number(char),
+    Number(String),
     Operator(char),
     LeftBracket(char),
     RightBracket(char),
@@ -9,10 +11,10 @@ pub enum Token {
 }
 #[derive(Debug)]
 pub enum Expr {
-    Number(u32),
+    Number(number),
     Operator(char, Vec<Expr>),
 }
-
+#[derive(Debug)]
 pub struct Tokens {
     tokens: VecDeque<Token>,
 }
@@ -20,13 +22,17 @@ pub struct Tokens {
 impl Tokens {
     pub fn new(s: String) -> Tokens {
         let mut deq = VecDeque::new();
-        for i in s.chars() {
-            match i {
+        let mut iter = s.chars().peekable();
+        while let Some(v) = iter.peek() {
+            let c = v;
+            match c {
                 '0'..='9' => {
-                    deq.push_back(Token::Number(i));
+                    let s = Self::parser_number_string(&mut iter);
+                    deq.push_back(Token::Number(s));
+                    continue;
                 }
-                '+' | '-' | '*' | '/' => {
-                    deq.push_back(Token::Operator(i));
+                '+' | '-' | '*' | '/' | '%'|'^' => {
+                    deq.push_back(Token::Operator(c.to_owned()));
                 }
                 '(' => {
                     deq.push_back(Token::LeftBracket('('));
@@ -39,9 +45,12 @@ impl Tokens {
                     panic!("Unknown character")
                 }
             }
+            iter.next();
         }
+
         Self { tokens: deq }
     }
+
     pub fn next(&mut self) -> Token {
         self.tokens.pop_front().unwrap_or(Token::Eof)
     }
@@ -58,6 +67,25 @@ impl Tokens {
             last_token = Some(token)
         }
     }
+    pub fn parser_number_string<I: Iterator<Item = char>>(iter: &mut Peekable<I>) -> String {
+        let mut s = String::new();
+        if let Some(v) = iter.next() {
+            s.push(v);
+        }
+        while let Some(v) = iter.peek() {
+            match v {
+                '0'..='9' => {
+                    s.push(v.to_owned());
+                    iter.next();
+                }
+                _ => {
+                    break;
+                }
+            }
+            // iter.next();
+        }
+        s
+    }
     pub fn parser(&mut self) -> Expr {
         let mut op = match self.next() {
             Token::Number(v) => panic!("Invalid expression,first token should is operator."),
@@ -67,7 +95,7 @@ impl Tokens {
             Token::Eof => panic!("expression can't be empty."),
         };
         let left = match self.peek() {
-            Token::Number(v) => Expr::Number(v.to_digit(10).expect("Invalid expression")),
+            Token::Number(v) => Expr::Number(v.parse().expect("Invalid expression")),
             Token::Operator(v) => {
                 panic!("Invalid expression,expecting a number,but get one '{}'.", v)
             }
@@ -82,7 +110,7 @@ impl Tokens {
         };
         self.next();
         let right = match self.peek() {
-            Token::Number(v) => Expr::Number(v.to_digit(10).expect("Invalid expression")),
+            Token::Number(v) => Expr::Number(v.parse().expect("Invalid expression")),
             Token::Operator(v) => {
                 panic!("Invalid expression,expecting a number,but get one '{}'.", v)
             }
@@ -108,47 +136,69 @@ impl Tokens {
     }
 }
 
-///Operator('+', [Operator('+', [Number(1), Number(2)]), Operator('+', [Number(1), Number(2)])])
-
-pub fn calc(deq: &Expr)->u32 {
+pub fn calc(deq: &Expr) -> number {
     match deq {
-        Expr::Number(v) =>v.to_owned() ,
+        Expr::Number(v) => v.to_owned(),
         Expr::Operator(op, exprs) => {
-            let left=match &exprs[0] {
+            let left = match &exprs[0] {
                 Expr::Number(v) => v.to_owned(),
-                Expr::Operator(v, exprs) =>eval_op(calc(&exprs[0]), op.to_owned(), calc(&exprs[1])),
+                Expr::Operator(v, exprs) => eval_op(calc(&exprs[0]), v.to_owned(), calc(&exprs[1])),
             };
-            let right=match &exprs[1] {
+            let right = match &exprs[1] {
                 Expr::Number(v) => v.to_owned(),
-                Expr::Operator(v, exprs) =>eval_op(calc(&exprs[0]), op.to_owned(), calc(&exprs[1])),
+                Expr::Operator(v, exprs) => eval_op(calc(&exprs[0]), v.to_owned(), calc(&exprs[1])),
             };
             eval_op(left, op.to_owned(), right)
         }
     }
 }
 pub fn eval() {}
-pub fn eval_op(x: u32, op: char, y: u32) -> u32 {
+pub fn eval_op(x: number, op: char, y: number) -> number {
     match op {
         '+' => x + y,
         '-' => x - y,
         '/' => x / y,
         '*' => x * y,
+        '%' => x % y,
+        '^' => x.pow(y),
         _ => panic!("Unknown character"),
     }
 }
-// #[test]
-// fn test() {
-//     let mut tokens = Tokens::new("+ 1 2".to_string());
-//     let expr=tokens.parser();
-//     println!("{:?}", expr);
-//     println!("{:?}", calc(&expr));
-// }
+#[test]
+fn test() {
+    let mut tokens = Tokens::new("+ 1 2".to_string());
+    let expr = tokens.parser();
+    println!("{:?}", expr);
+    let v = calc(&expr);
+    assert_eq!(3,v);
+    println!("{:?}", v);
+}
+#[test]
+fn long_number() {
+    let mut tokens = Tokens::new("+ 12 2".to_string());
+    let expr = tokens.parser();
+    println!("{:?}", expr);
+    let v = calc(&expr);
+    assert_eq!(14,v);
+    println!("{:?}", v);
+}
+#[test]
+fn operator_test() {
+    let mut tokens = Tokens::new("^ (% 8 3) 2".to_string());
+    let expr = tokens.parser();
+    println!("{:?}", expr);
+    let v = calc(&expr);
+    assert_eq!(4,v);
+    println!("{:?}", v);
+}
 
 #[test]
 fn long_expression() {
-    let mut tokens = Tokens::new("+ (+ 1 2) (+ 1 2)".to_string());
-    let expr=tokens.parser();
+    let mut tokens = Tokens::new("+ (% 18 2) (+ 5 2)".to_string());
+    println!("{:?}", tokens);
+    let expr = tokens.parser();
     println!("{:?}", expr);
-    println!("{:?}", calc(&expr));
-
+    let v = calc(&expr);
+    assert_eq!(7,v);
+    println!("{:?}", v);
 }
