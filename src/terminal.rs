@@ -23,9 +23,9 @@ impl Terminal {
             std::io::stdin()
                 .read_line(&mut input)
                 .expect("Failed read user input");
-            let mut ss=input.trim();
-            let mut tokens=Tokens::new(ss.to_string());
-            let expr=tokens.parser();
+            let ss = input.trim();
+            let mut tokens = Tokens::new(ss.to_string());
+            let expr = tokens.parser();
             Terminal::println(format!("calc result is '{}'", expr.calc()));
         }
     }
