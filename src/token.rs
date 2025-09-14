@@ -1,10 +1,10 @@
-use std::{collections::{btree_map::VacantEntry, VecDeque}, iter::Peekable};
+use std::{collections::VecDeque, iter::Peekable};
 
 use thiserror::Error;
 #[derive(Debug, Error)]
-enum TokensError {
+enum TokensError<'a> {
     #[error("Invalid expression expected {expected:?},found {found:?}")]
-    InvalidExpression { expected: String, found: String },
+    InvalidExpression { expected: &'a str, found: &'a str},
 }
 type Num = u32;
 #[derive(Debug)]
@@ -36,47 +36,51 @@ pub enum QExpr {
 
 impl MathExpr {
     ///计算数学表达式，返回数字
-    pub fn calc(&self) -> u32 {
+    pub fn calc(&self) -> Num {
         match self {
             // 如果表达式就是一个数字直接返回就可以了
             MathExpr::Number(v) => v.to_owned(),
             MathExpr::Operator(op, exprs) => {
-                let mut iter = exprs.iter();
+                let mut _iter = exprs.iter();
                 // 先获取一个基础数字，如果运算符后面不跟数字，代表表达式错误
-                let base = iter.next().expect("Invalid expression");
-                let mut res = 0;
+                let base = _iter.next().expect("Invalid expression");
+                let mut _res = 0;
                 // 尝试获取一个数字
-                res = match base {
+                _res = match base {
                     MathExpr::Number(v) => v.to_owned(),
                     MathExpr::Operator(op, exprs) => {
                         let mut iter = exprs.iter();
-                        // 获取第一个值,第一个值不可能为没有
-                        res = iter.next().expect("Invalid expression").calc();
+                        // 获取第一个值,第一个值不可能没有
+                        _res = iter.next().expect("Invalid expression").result();
                         for expr in iter {
                             let value = expr.calc();
-                            res = eval_op(res, op.to_owned(), value);
+                            _res = eval_op(_res, op.to_owned(), value);
                         }
-                        res
+                        _res
                     }
                 };
-                for i in iter {
-                    res = eval_op(res, op.to_owned(), i.calc())
+                for i in _iter {
+                    _res = eval_op(_res, op.to_owned(), i.result())
                 }
-                res
+                _res
                 // 将第一个数字与其他数字计算
             }
         }
     }
-    pub fn result(&self)->Num{
+    /// 获取计算结果
+    pub fn result(&self) -> Num {
         match self {
             MathExpr::Number(v) => v.to_owned(),
             MathExpr::Operator(op, v) => Self::calc_by_iter(op.to_owned(), v.iter()),
         }
     }
+    // 通过迭代器的方式计算值,传入的如果是一个数那么直接返回，如果是一个表达式，通过递归调用直到遇到数字为止
     pub fn calc_by_iter<'a, I: Iterator<Item = &'a MathExpr>>(op: char, mut v: I) -> Num {
         let mut first = match v.next().expect("Invalid expression") {
             MathExpr::Number(v) => v.to_owned(),
-            MathExpr::Operator(op, math_exprs) => Self::calc_by_iter(op.to_owned(), math_exprs.iter()),
+            MathExpr::Operator(op, math_exprs) => {
+                Self::calc_by_iter(op.to_owned(), math_exprs.iter())
+            }
         };
         for i in v {
             let value = match i {
@@ -136,18 +140,7 @@ impl Tokens {
     pub fn peek(&self) -> &Token {
         self.tokens.front().unwrap_or(&Token::Eof)
     }
-    ///检查表都城是否正确，当前还未完成
-    pub fn check(&self) {
-        let mut last_token = None;
-        for token in &self.tokens {
-            if last_token.is_none() {
-                last_token = Some(token);
-                continue;
-            }
-            last_token = Some(token)
-        }
-        todo!()
-    }
+
     ///读取数字，可用于读取连续数字
     pub fn parser_number_string<I: Iterator<Item = char>>(iter: &mut Peekable<I>) -> String {
         let mut s = String::new();
@@ -173,10 +166,11 @@ impl Tokens {
         // 第一次读取表达式一定是运算符或者括号
         let mut op = match self.next() {
             Token::Number(v) => MathExpr::Number(v.parse().expect("Invalid expression")),
+            // 如果是操作符就创建一颗树
             Token::Operator(v) => MathExpr::Operator(v, vec![]),
             Token::LeftBracket(_) => self.parser(),
             // 第一个表达式不可能为右括号
-            Token::RightBracket(_) => panic!("Invalid expression,first token should is operator."),
+            Token::RightBracket(_) => panic!("Invalid expression,first token should is operator or left-bracket."),
             // 第一个表达式不可能为空，数学表达式只应该返回数字
             Token::Eof => panic!("expression can't be empty."),
         };
@@ -187,7 +181,7 @@ impl Tokens {
                 } else {
                     let value = match self.peek() {
                         Token::Number(v) => {
-                            MathExpr::Number(v.parse().expect("Invalid expression"))
+                            MathExpr::Number(v.parse().expect("Invalid expression,the number is invalid"))
                         }
                         Token::Operator(v) => {
                             panic!("Invalid expression,expecting a number,but get one '{}'.", v)
@@ -211,6 +205,7 @@ impl Tokens {
         }
         op
     }
+    #[allow(clippy::inherent_to_string)]
     ///转换为字符串
     pub fn to_string(&self) -> String {
         format!("{:#?}", self.tokens)
@@ -220,7 +215,7 @@ impl Tokens {
 pub fn calc<I: Iterator<Item = MathExpr>>(op: char, v: &mut I) -> Num {
     let mut first = match v.next().expect("Invalid expression") {
         MathExpr::Number(v) => v.to_owned(),
-        MathExpr::Operator(op, mut math_exprs) => calc(op.to_owned(), &mut math_exprs.into_iter()),
+        MathExpr::Operator(op, math_exprs) => calc(op.to_owned(), &mut math_exprs.into_iter()),
     };
     for i in v {
         let value = match i {
@@ -231,7 +226,6 @@ pub fn calc<I: Iterator<Item = MathExpr>>(op: char, v: &mut I) -> Num {
     }
     first
 }
-pub fn eval(op: char, numbers: &Vec<MathExpr>) {}
 pub fn eval_op(x: Num, op: char, y: Num) -> Num {
     match op {
         '+' => x + y,
