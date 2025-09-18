@@ -4,6 +4,9 @@
 use crate::terminal::Terminal;
 mod token;
 mod terminal;
+mod utils;
+mod ac;
+mod varmap;
 
 fn main() {
     let terminal=Terminal::new();
