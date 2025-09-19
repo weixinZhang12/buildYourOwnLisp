@@ -14,8 +14,8 @@ mod string {
                 right = 0;
             } else {
                 right += 1;
-                if right==ns_len{
-                    return Some(left-ns_len+1);
+                if right == ns_len {
+                    return Some(left - ns_len + 1);
                 }
             }
             left += 1;
@@ -35,7 +35,7 @@ fn find_str() {
     let ns = "min";
     let res = find(s, ns);
     assert_eq!(Some(4_usize), res);
-      let s = "(* (min 3,4) 2) ";
+    let s = "(* (min 3,4) 2) ";
     let ns = "mine";
     let res = find(s, ns);
     assert_eq!(None, res);

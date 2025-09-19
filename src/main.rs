@@ -7,6 +7,7 @@ mod terminal;
 mod utils;
 mod ac;
 mod varmap;
+mod calc;
 
 fn main() {
     let terminal=Terminal::new();
