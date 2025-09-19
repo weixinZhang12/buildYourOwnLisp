@@ -87,7 +87,7 @@ impl Expr {
     pub fn calc(&self) -> Expr {
         match self {
             Expr::Number(v) => Expr::Number(*v),
-            Expr::Operator(op, exprs) => Self::assign(op, exprs),
+            Expr::Operator(op, exprs) => Self::switch(op, exprs),
             Expr::QExpr(tokens) => Expr::QExpr(tokens.to_owned()),
         }
     }
@@ -96,7 +96,7 @@ impl Expr {
         match self {
             Expr::Number(v) => v.to_owned(),
             Expr::Operator(op, v) => {
-                if let Expr::Number(v) = Self::assign(op, v) {
+                if let Expr::Number(v) = Self::switch(op, v) {
                     v
                 } else {
                     panic!("Invalid")
@@ -107,7 +107,7 @@ impl Expr {
     }
 
     // 通过迭代器的方式计算值,传入的如果是一个数那么直接返回，如果是一个表达式，通过递归调用直到遇到数字为止
-    pub fn assign(op: &str, v: &[Expr]) -> Expr {
+    pub fn switch(op: &str, v: &[Expr]) -> Expr {
         match op {
             "head" =>  head(v).to_owned(),
             "+" => add(v),
@@ -265,7 +265,7 @@ impl Tokens {
                             v.parse().expect("Invalid expression,the number is invalid"),
                         ),
                         Token::Operator(v) => {
-                            panic!("Invalid expression,expecting a number,but get one '{}'.", v)
+                            panic!("{}",TokensError::InvalidExpression { expected: "number", found: v.as_str() })
                         }
                         Token::LeftBracket => {
                             // 跳过这个左括号，可以少递归一层
@@ -276,7 +276,7 @@ impl Tokens {
                             return op;
                         }
                         Token::Eof => {
-                            panic!("Invalid expression,expecting a number,but get one 'Eof'.")
+                            panic!("{}",TokensError::InvalidExpression { expected: "number", found: "Eof" })
                         }
                         Token::LeftBraces => {
                             self.next();
@@ -284,6 +284,7 @@ impl Tokens {
                         }
                         Token::RightBraces => break,
                     };
+                    
                     vec.push(value);
                     self.next();
                 }
@@ -292,38 +293,6 @@ impl Tokens {
         op
     }
 }
-// 计算单个表达式树的值，只能计算Number类型的运算
-pub fn calc<I: Iterator<Item = Expr>>(op: String, v: &mut I) -> Num {
-    let mut first = match v.next().expect("Invalid expression") {
-        Expr::Number(v) => v.to_owned(),
-        Expr::Operator(op, math_exprs) => calc(op.to_owned(), &mut math_exprs.into_iter()),
-        Expr::QExpr(exprs) => panic!("Invalid"),
-    };
-    for expr in v {
-        let value = match expr {
-            Expr::Number(v) => v,
-            Expr::Operator(op, math_exprs) => calc(op, &mut math_exprs.into_iter()),
-            Expr::QExpr(exprs) => panic!("Invalid"),
-        };
-        first = eval_op(first, op.to_owned(), value)
-    }
-    first
-}
-// 计算表达式的值，只能支持Number类型的计算
-pub fn eval_op(x: Num, op: String, y: Num) -> Num {
-    match op.as_str() {
-        "+" => x + y,
-        "-" => x - y,
-        "/" => x / y,
-        "*" => x * y,
-        "%" => x % y,
-        "^" => x.pow(y),
-        "min" => x.min(y),
-        "max" => x.max(y),
-        _ => panic!("Unknown character"),
-    }
-}
-
 #[test]
 fn test() {
     let mut tokens = Tokens::new("+ 1 2".to_string());
@@ -406,7 +375,7 @@ fn qexpr() {
 }
 #[test]
 fn qexpr2() {
-    let mut tokens = Tokens::new("head { 1 2 { 3 4 }}".to_string());
+    let mut tokens = Tokens::new("head { (1)2 { 3 4 }}".to_string());
     println!("tokens: {:?}", tokens);
     let expr = tokens.parser();
     println!("expr: {:?}", expr);

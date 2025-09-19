@@ -16,7 +16,7 @@ pub fn add(tokens: &[Expr]) -> Expr {
             Expr::Number(v) => *v,
             // 如果相加的是一个表达式
             Expr::Operator(op, exprs) => {
-                let r = Expr::assign(op, exprs);
+                let r = Expr::switch(op, exprs);
                 match r {
                     Expr::Number(v) => v,
                     _ => panic!("{}", TokensError::Invalid),
@@ -43,7 +43,7 @@ pub fn sub(tokens: &[Expr]) -> Expr {
         let temp = match i {
             Expr::Number(v) => *v,
             Expr::Operator(op, exprs) => {
-                let r = Expr::assign(op, exprs);
+                let r = Expr::switch(op, exprs);
                 match r {
                     Expr::Number(v) => v,
                     _ => panic!("{}", TokensError::Invalid),
@@ -70,7 +70,7 @@ pub fn mul(tokens: &[Expr]) -> Expr {
         let temp = match i {
             Expr::Number(v) => *v,
             Expr::Operator(op, exprs) => {
-                let r = Expr::assign(op, exprs);
+                let r = Expr::switch(op, exprs);
                 match r {
                     Expr::Number(v) => v,
                     _ => panic!("{}", TokensError::Invalid),
@@ -97,7 +97,7 @@ pub fn div(tokens: &[Expr]) -> Expr {
         let temp = match i {
             Expr::Number(v) => *v,
             Expr::Operator(op, exprs) => {
-                let r = Expr::assign(op, exprs);
+                let r = Expr::switch(op, exprs);
                 match r {
                     Expr::Number(v) => v,
                     _ => panic!("{}", TokensError::Invalid),
@@ -124,7 +124,7 @@ pub fn min(tokens: &[Expr]) -> Expr {
         let temp = match i {
             Expr::Number(v) => *v,
             Expr::Operator(op, exprs) => {
-                let r = Expr::assign(op, exprs);
+                let r = Expr::switch(op, exprs);
                 match r {
                     Expr::Number(v) => v,
                     _ => panic!("{}", TokensError::Invalid),
@@ -153,7 +153,7 @@ pub fn max(tokens: &[Expr]) -> Expr {
         let temp = match i {
             Expr::Number(v) => *v,
             Expr::Operator(op, exprs) => {
-                let r = Expr::assign(op, exprs);
+                let r = Expr::switch(op, exprs);
                 match r {
                     Expr::Number(v) => v,
                     _ => panic!("{}", TokensError::Invalid),
@@ -182,7 +182,7 @@ pub fn mmod(tokens: &[Expr]) -> Expr {
         let temp = match i {
             Expr::Number(v) => *v,
             Expr::Operator(op, exprs) => {
-                let r = Expr::assign(op, exprs);
+                let r = Expr::switch(op, exprs);
                 match r {
                     Expr::Number(v) => v,
                     _ => panic!("{}", TokensError::Invalid),
@@ -207,7 +207,7 @@ pub fn mi(tokens: &[Expr]) -> Expr {
         let temp = match i {
             Expr::Number(v) => *v,
             Expr::Operator(op, exprs) => {
-                let r = Expr::assign(op, exprs);
+                let r = Expr::switch(op, exprs);
                 match r {
                     Expr::Number(v) => v,
                     _ => panic!("{}", TokensError::Invalid),
