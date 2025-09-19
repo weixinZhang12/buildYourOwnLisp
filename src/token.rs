@@ -295,6 +295,16 @@ impl Tokens {
 }
 #[test]
 fn test() {
+    let mut tokens = Tokens::new("% 2 2".to_string());
+    println!("{:?}", tokens);
+    let expr = tokens.parser();
+    println!("{:?}", expr);
+    let v = expr.math_result();
+    assert_eq!(0, v);
+    println!("{:?}", v);
+}
+#[test]
+fn simple() {
     let mut tokens = Tokens::new("+ 1 2".to_string());
     println!("{:?}", tokens);
     let expr = tokens.parser();
@@ -381,4 +391,5 @@ fn qexpr2() {
     println!("expr: {:?}", expr);
     let v = expr.calc();
     println!("{}", v);
+
 }
